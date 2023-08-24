@@ -176,18 +176,19 @@ export default {
 
       if (this.innerValue.length > 0) {
         this.innerValue.forEach(item => {
-          const polygonData = item.map(point => {
-            return { x: point[0], y: point[1] }
-          })
-          const currentPolygon = new fabric.Polygon(
-            polygonData,
-            {
-              fill: 'transparent',
-              stroke: '#f00',
-              strokeWidth: 2
-            }
-          )
-          this.canvas.add(currentPolygon)
+          this.createPolygonByCoordinate(item)
+          // const polygonData = item.map(point => {
+          //   return { x: point[0], y: point[1] }
+          // })
+          // const currentPolygon = new fabric.Polygon(
+          //   polygonData,
+          //   {
+          //     fill: 'transparent',
+          //     stroke: '#f00',
+          //     strokeWidth: 2
+          //   }
+          // )
+          // this.canvas.add(currentPolygon)
 
           // const rect = new fabric.Rect({
           //   top: item.top,
@@ -253,16 +254,19 @@ export default {
       this.isMoving = this.ctrlType === 'move'
       this.isEditing = this.ctrlType === 'draw'
 
+      const objectOption = this.getObjectOption()
+
       if (this.ctrlType === 'move') {
         this.canvas.selection = false
         this.canvas.skipTargetFind = false // 允许选中
         this.canvas.defaultCursor = 'grab'
         this.canvas.getObjects().forEach(item => {
-          item.hasControls = false
-          item.lockMovementX = true
-          item.lockMovementY = true
-          item.selectable = true
-          item.hoverCursor = 'pointer'
+          // item.hasControls = false
+          // item.lockMovementX = true
+          // item.lockMovementY = true
+          // item.selectable = true
+          // item.hoverCursor = 'pointer'
+          item.set(objectOption)
         })
       } else if (this.ctrlType === 'drag') {
         this.canvas.selection = true
@@ -271,11 +275,12 @@ export default {
         this.canvas.skipTargetFind = false // 允许选中
         this.canvas.defaultCursor = 'default'
         this.canvas.getObjects().forEach(item => {
-          item.hasControls = true
-          item.lockMovementX = false
-          item.lockMovementY = false
-          item.selectable = true
-          item.hoverCursor = 'move'
+          // item.hasControls = true
+          // item.lockMovementX = false
+          // item.lockMovementY = false
+          // item.selectable = true
+          // item.hoverCursor = 'move'
+          item.set(objectOption)
         })
       } else if (this.ctrlType === 'draw') {
         this.canvas.selection = true
@@ -284,9 +289,39 @@ export default {
         this.canvas.skipTargetFind = true // 禁止选中
         this.canvas.defaultCursor = 'crosshair'
         this.canvas.getObjects().forEach(item => {
-          item.selectable = false
+          // item.selectable = false
+          item.set(objectOption)
         })
       }
+    },
+    getObjectOption () {
+      let option = {}
+      switch (this.ctrlType) {
+        case 'move':
+          option = {
+            hasControls: false,
+            lockMovementX: true,
+            lockMovementY: true,
+            selectable: true,
+            hoverCursor: 'pointer'
+          }
+          break
+        case 'drag':
+          option = {
+            hasControls: true,
+            lockMovementX: false,
+            lockMovementY: false,
+            selectable: true,
+            hoverCursor: 'move'
+          }
+          break
+        case 'draw':
+          option = {
+            selectable: false
+          }
+          break
+      }
+      return option
     },
     onStateChange (state) {
       this.state = state
@@ -440,13 +475,30 @@ export default {
           y: Math.max(this.downPoint.y, pointer.y)
         }
       ]
+      const objectOption = this.getObjectOption()
       const currentPolygon = new fabric.Polygon(
         polygonData,
         {
           fill: 'transparent',
           stroke: '#f00',
           strokeWidth: 2,
-          selectable: false
+          ...objectOption
+        }
+      )
+      this.canvas.add(currentPolygon)
+    },
+    createPolygonByCoordinate (item) {
+      const polygonData = item.map(point => {
+        return { x: point[0], y: point[1] }
+      })
+      const objectOption = this.getObjectOption()
+      const currentPolygon = new fabric.Polygon(
+        polygonData,
+        {
+          fill: 'transparent',
+          stroke: '#f00',
+          strokeWidth: 2,
+          ...objectOption
         }
       )
       this.canvas.add(currentPolygon)

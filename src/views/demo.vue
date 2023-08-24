@@ -16,12 +16,13 @@
         <el-col :span="16">
           <div class="layout-flex column">
             <div class="layout-flex-l">
-              <of-fabric v-model="calloutList"
+              <of-fabric ref="refFabric"
+                         v-model="calloutList"
                          :image="demoPdf"
                          @choose="onChoose"></of-fabric>
             </div>
             <div class="layout-flex-s">
-              <div class="filter justify-center bottom">
+              <div class="filter justify-start bottom">
                 <el-button size="small"
                            type="primary">上一页</el-button>
                 <el-button size="small"
@@ -35,11 +36,13 @@
             <div class="layout-flex-s">
               <div class="filter justify-star top">
                 <el-button size="small"
-                           type="primary">新增</el-button>
+                           type="primary"
+                           @click="onCreate">新增</el-button>
                 <el-button size="small"
-                           type="primary">结果确认</el-button>
+                           type="primary"
+                           plain>结果确认</el-button>
                 <el-button size="small"
-                           type="primary">返回</el-button>
+                           type="default">返回</el-button>
               </div>
             </div>
             <div class="layout-flex-l">
@@ -245,6 +248,17 @@ export default {
         message: target
       })
     },
+    onCreate () {
+      // 坐标
+      const coordinate = [[1309.460251046025, 218.91631799163181], [2094.723849372385, 218.91631799163181], [2094.723849372385, 341.41841004184107], [1309.460251046025, 341.41841004184107]]
+      // 根据坐标创建框
+      this.$refs.refFabric.createPolygonByCoordinate(coordinate)
+
+      this.$notify({
+        title: '新增选框',
+        message: coordinate
+      })
+    },
     onCheckClick (row) {
       console.log(row)
     },
@@ -264,6 +278,7 @@ export default {
 
 .el-header {
   padding: 5px;
+  margin-bottom: 5px;
   border-bottom: dashed 1px #ccc;
   height: auto !important;
 }
