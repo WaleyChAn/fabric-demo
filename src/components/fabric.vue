@@ -41,7 +41,8 @@
           </el-button>
         </el-tooltip>
       </el-button-group>
-      <el-radio-group v-model="ctrlType"
+      <el-radio-group v-if="state === 1"
+                      v-model="ctrlType"
                       size="small"
                       @input="onCtrlTypeChange">
         <el-tooltip v-for="item in ctrlList"
@@ -55,6 +56,26 @@
           </el-radio-button>
         </el-tooltip>
       </el-radio-group>
+      <el-button-group>
+        <el-tooltip v-if="state === 0"
+                    class="item"
+                    effect="dark"
+                    content="编辑模式"
+                    placement="bottom">
+          <el-button size="small"
+                     icon="el-icon-setting"
+                     @click="onStateChange(1)"></el-button>
+        </el-tooltip>
+        <el-tooltip v-if="state === 1"
+                    class="item"
+                    effect="dark"
+                    content="退出编辑模式"
+                    placement="bottom">
+          <el-button size="small"
+                     icon="el-icon-close"
+                     @click="onStateChange(0)"></el-button>
+        </el-tooltip>
+      </el-button-group>
     </div>
   </div>
 </template>
@@ -77,6 +98,7 @@ export default {
   data () {
     return {
       innerValue: [],
+      state: 0, // 0: 查阅 1: 编辑
       canvas: null,
       zoom: 1,
       downPoint: null,
@@ -180,7 +202,8 @@ export default {
         })
       }
 
-      this.onCtrlTypeChange()
+      // this.onCtrlTypeChange()
+      this.onStateChange(0)
 
       this.canvas.on('mouse:wheel', this.onMouseWheel)
       this.canvas.on('mouse:down', this.onMouseDown)
@@ -222,23 +245,59 @@ export default {
         }
       }
     },
-    onCtrlTypeChange () {
+    onCtrlTypeChange (type) {
+      if (type) {
+        this.ctrlType = type
+      }
+
       this.isMoving = this.ctrlType === 'move'
       this.isEditing = this.ctrlType === 'draw'
 
       if (this.ctrlType === 'move') {
         this.canvas.selection = false
-        this.canvas.skipTargetFind = true // 禁止选中
+        this.canvas.skipTargetFind = false // 允许选中
+        this.canvas.defaultCursor = 'grab'
+        this.canvas.getObjects().forEach(item => {
+          item.hasControls = false
+          item.lockMovementX = true
+          item.lockMovementY = true
+          item.selectable = true
+          item.hoverCursor = 'pointer'
+        })
       } else if (this.ctrlType === 'drag') {
         this.canvas.selection = true
         this.canvas.selectionColor = 'rgba(100, 100, 255, 0.3)'
         this.canvas.selectionBorderColor = 'rgba(255, 255, 255, 0.3)'
         this.canvas.skipTargetFind = false // 允许选中
+        this.canvas.defaultCursor = 'default'
+        this.canvas.getObjects().forEach(item => {
+          item.hasControls = true
+          item.lockMovementX = false
+          item.lockMovementY = false
+          item.selectable = true
+          item.hoverCursor = 'move'
+        })
       } else if (this.ctrlType === 'draw') {
         this.canvas.selection = true
         this.canvas.selectionColor = 'transparent'
         this.canvas.selectionBorderColor = 'rgba(255, 0, 0, 0.2)'
         this.canvas.skipTargetFind = true // 禁止选中
+        this.canvas.defaultCursor = 'crosshair'
+        this.canvas.getObjects().forEach(item => {
+          item.selectable = false
+        })
+      }
+    },
+    onStateChange (state) {
+      this.state = state
+
+      switch (this.state) {
+        case 0:
+          this.onCtrlTypeChange('move')
+          break
+        case 1:
+          this.onCtrlTypeChange('drag')
+          break
       }
     },
     onKeyDown (e) {
@@ -248,6 +307,7 @@ export default {
           this.isMoving = true
           break
         case 46:
+          if (this.state === 0) return
           this.canvas.getActiveObjects().forEach(obj => {
             this.canvas.remove(obj)
           })
@@ -297,6 +357,7 @@ export default {
     },
     onMouseUp (opt) {
       let evt = opt.e
+      const target = opt.target
       this.canvas.setViewportTransform(this.canvas.viewportTransform) // 设置此画布实例的视口转换
       this.isDragging = false
 
@@ -309,19 +370,24 @@ export default {
           this.handlerComplete(this.canvas.getObjects())
         }
       })
+
+      if (target) {
+        this.$emit('choose', this.getCoordinate(target))
+      }
     },
     handlerComplete (list) {
-      const points = list && list.map(item => {
-        const { aCoords } = item
-        const { tl, tr, bl, br } = aCoords
-        return [
-          [tl.x, tl.y],
-          [tr.x, tr.y],
-          [br.x, br.y],
-          [bl.x, bl.y]
-        ]
-      })
+      const points = list && list.map(item => this.getCoordinate(item))
       this.$emit('input', points)
+    },
+    getCoordinate (item) {
+      const { aCoords } = item
+      const { tl, tr, bl, br } = aCoords
+      return [
+        [tl.x, tl.y],
+        [tr.x, tr.y],
+        [br.x, br.y],
+        [bl.x, bl.y]
+      ]
     },
     createRect (pointer) {
       // 点击事件，不生成矩形
@@ -343,7 +409,8 @@ export default {
         height,
         fill: 'transparent',
         stroke: '#f00',
-        strokeWidth: 2
+        strokeWidth: 2,
+        selectable: false
       })
 
       // 将矩形添加到画布上
@@ -378,7 +445,8 @@ export default {
         {
           fill: 'transparent',
           stroke: '#f00',
-          strokeWidth: 2
+          strokeWidth: 2,
+          selectable: false
         }
       )
       this.canvas.add(currentPolygon)
@@ -390,11 +458,10 @@ export default {
 <style scoped>
 .of-fabric {
   position: relative;
-  width: 100%;
   height: 100%;
 }
 
-.of-fabric.editing /deep/ .of-fabric__canvas {
+/* .of-fabric.editing /deep/ .of-fabric__canvas {
   cursor: crosshair !important;
 }
 
@@ -404,7 +471,7 @@ export default {
 
 .of-fabric.dragging /deep/ .of-fabric__canvas {
   cursor: grabbing !important;
-}
+} */
 
 .of-fabric__wrapper,
 .of-fabric__canvas {
