@@ -1,6 +1,6 @@
 <template>
   <div class="of-fabric"
-       :class="{'moving': isMoving, 'dragging': isDragging, 'editing': isEditing}">
+       :class="{'moving': isMoving, 'dragging': isDragging, 'editing': isEditing, 'full-screen': isFullScreen}">
     <div ref="refFabricWrapper"
          class="of-fabric__wrapper">
       <canvas id="canvas"
@@ -38,6 +38,18 @@
           <el-button size="small"
                      @click="onSetZoomByMode(2)">
             <i class="el-icon-refresh-right"></i>
+          </el-button>
+        </el-tooltip>
+        <el-tooltip class="item"
+                    effect="dark"
+                    :content="isFullScreen ? '退出画布全屏' : '画布全屏'"
+                    placement="bottom">
+          <el-button size="small"
+                     @click="onFullScreen()">
+            <i v-if="isFullScreen"
+               class="el-icon-copy-document"></i>
+            <i v-else
+               class="el-icon-full-screen"></i>
           </el-button>
         </el-tooltip>
       </el-button-group>
@@ -102,6 +114,7 @@ export default {
       canvas: null,
       zoom: 1,
       downPoint: null,
+      isFullScreen: false,
       isMoving: true,
       isDragging: false,
       isEditing: false,
@@ -502,6 +515,20 @@ export default {
         }
       )
       this.canvas.add(currentPolygon)
+    },
+    onFullScreen () {
+      this.isFullScreen = !this.isFullScreen
+
+      this.$nextTick(() => {
+        const _wrapper = this.$refs.refFabricWrapper
+        const wrapperWidth = _wrapper.clientWidth
+        const wrapperHeight = _wrapper.clientHeight
+
+        this.canvas.setDimensions({
+          width: wrapperWidth,
+          height: wrapperHeight
+        })
+      })
     }
   }
 }
@@ -525,10 +552,19 @@ export default {
   cursor: grabbing !important;
 } */
 
+.of-fabric.full-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 10;
+}
+
 .of-fabric__wrapper,
 .of-fabric__canvas {
   width: 100%;
   height: 100%;
+  background: #fff;
 }
 
 .of-fabric__toolbox {
